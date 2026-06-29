@@ -1,89 +1,98 @@
 # PuzzleCam — Gesture Capture
-
 **© 2026 aiwithunnati — all rights reserved**
 
-A hand-gesture controlled photobooth puzzle game that runs entirely in the browser. No installation, no backend, no dependencies to install.
+A hand-gesture controlled photobooth puzzle game that runs entirely in your browser. No installation, no backend, no frameworks. Just your hands and a webcam.
 
 ---
 
-## What it does
+## what is this?
 
-PuzzleCam uses your webcam and hand tracking to let you:
+You use your hands as a camera frame, pinch to take a photo, solve a puzzle with your fingers, and watch it shatter into a polaroid strip. The whole thing runs in one browser tab with zero setup.
 
-1. **Frame a photo with your hands** — hold both hands up, the space between your index fingertips becomes the camera frame
-2. **Pinch to capture** — both hands pinch → 3-second countdown → photo taken with a color photobooth effect
-3. **Solve the puzzle** — photo splits into a 3×3 grid, solve it by dragging pieces with a pinch gesture
-4. **Fist to save** — completed puzzle shatters with a physics animation and saves to your photo strip
-5. **Download your strip or video** — collect 3 puzzles and download as PNG, or download a video of your solve
+Built with vanilla JavaScript, MediaPipe hand tracking, and the Web Audio API. No React. No npm. Nothing to install.
 
 ---
 
-## Demo
+## how to run it
 
-- Frame your shot with both hands
-- Pinch to start the countdown
-- Drag pieces with one-hand pinch to solve the puzzle
-- Make a fist to save — watch it shatter!
-- All 3 completed puzzles stack into a downloadable vertical photo strip
-
----
-
-## Gesture controls
-
-| Gesture | Action |
-|---|---|
-| Both hands pinching | Freeze the frame area and start countdown |
-| One hand pinching over a piece | Drag the puzzle piece |
-| Closed fist (hold) | Save completed puzzle / reset board |
-
----
-
-## Features
-
-- Real-time hand landmark tracking via MediaPipe (no install needed)
-- Color photobooth effect with contrast boost and film grain
-- 3×3 puzzle with snap-to-cell and animated piece displacement
-- Physics-based shatter animation on save
-- Sound design — countdown beeps, piece snap, shatter burst, completion chime
-- Video recording of each solve, downloadable as WebM
-- Photo strip sidebar — collect 3 puzzles, download as PNG
-
----
-
-## How to run
-
+**1. clone the repo**
 ```bash
 git clone https://github.com/Unnati-23/puzzlecam.git
 cd puzzlecam
 ```
 
-Open in VS Code and click **Go Live** (Live Server extension by Ritwick Dey), then open `http://localhost:5500` and allow camera access.
+**2. open in VS Code and click Go Live**
 
-> Requires internet on first load to download the MediaPipe hand tracking model (~10MB)
+Install the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension by Ritwick Dey if you don't have it. Then click **Go Live** in the bottom right corner.
 
----
+**3. open in Chrome or Edge**
+```
+http://localhost:5500
+```
+Allow camera access when the browser asks.
 
-## Tech stack
-
-- **MediaPipe Tasks Vision** `v0.10.14` — 21-point hand landmark detection
-- **Canvas 2D API** — all rendering, effects, puzzle logic, shatter physics
-- **Web Audio API** — all sound effects generated in code, no audio files
-- **MediaRecorder API** — canvas capture for video download
-- **Vanilla JavaScript (ES Modules)** — no frameworks, no build step
+> needs internet on first load to download the MediaPipe hand model (~10MB). after that it works offline.
 
 ---
 
-## Browser support
+## how to play
 
-| Browser | Support |
+| gesture | what it does |
 |---|---|
-| Chrome / Edge | Recommended |
-| Firefox | Compatible |
-| Safari | Limited |
-| Mobile | Not recommended |
+| raise both hands | camera starts tracking your hands |
+| pinch both hands together | defines the photo frame and starts 3 second countdown |
+| one hand pinch on a piece | drag that puzzle piece |
+| drop piece near correct spot | it snaps in automatically |
+| closed fist (hold) | saves completed puzzle / resets board |
+
+**the full flow:**
+1. hold both hands up — the space between your index fingers becomes your camera frame
+2. pinch both hands → 3 second countdown → flash → photo captured in B&W
+3. solve the 3x3 puzzle by dragging pieces with a pinch gesture
+4. make a fist when done → pieces shatter → saved as a color polaroid with your date and photo number
+5. complete 3 puzzles → your full photo strip pops up → download it
 
 ---
 
-## License
+## what makes it different
+
+- puzzles are **B&W while solving**, then reveal as **full color** when saved
+- **camera flash** at the moment of capture
+- **polaroid borders** with date and number stamped on each photo
+- **sound design** — countdown beeps, piece snap, shatter burst, completion chime
+- **video recording** of each solve, downloadable as WebM
+- **photo strip popup** inside the game when all 3 are done
+- zero frameworks, zero dependencies, everything runs in the browser
+
+---
+
+## tech used
+
+- MediaPipe Tasks Vision `v0.10.14` — hand landmark detection
+- Canvas 2D API — rendering, effects, puzzle, shatter physics
+- Web Audio API — all sounds generated in code, no audio files
+- MediaRecorder API — video capture
+- Vanilla JavaScript (ES Modules) — no frameworks, no build step
+
+---
+
+## browser support
+
+| browser | support |
+|---|---|
+| Chrome / Edge | recommended |
+| Firefox | works |
+| Safari | limited |
+| mobile | not recommended |
+
+---
+
+## tag me!
+
+if you try this i would genuinely love to see your photobooth strip. tag me **@aiwithunnati** — have fun with it!
+
+---
+
+## license
 
 MIT — free to use, modify, and share.
