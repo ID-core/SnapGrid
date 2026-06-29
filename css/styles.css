@@ -376,6 +376,20 @@ canvas#sceneCanvas{
   color:#fff;
 }
 
+#flashOverlay{
+  position:absolute;
+  inset:0;
+  background:#fff;
+  opacity:0;
+  pointer-events:none;
+  z-index:50;
+  transition:opacity 0.08s ease;
+}
+#flashOverlay.flash{
+  opacity:1;
+  transition:none;
+}
+
 .rec-indicator{
   position:absolute;
   bottom:22px;

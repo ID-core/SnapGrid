@@ -59,6 +59,7 @@ const downloadVideoBtn = document.getElementById("downloadVideoBtn");
 const resetAllBtn = document.getElementById("resetAllBtn");
 const stripCompleteMsg = document.getElementById("stripCompleteMsg");
 const recIndicator = document.getElementById("recIndicator");
+const flashOverlay = document.getElementById("flashOverlay");
 const stripModal = document.getElementById("stripModal");
 const stripPreviewCanvas = document.getElementById("stripPreviewCanvas");
 const stripModalDownload = document.getElementById("stripModalDownload");
@@ -141,6 +142,26 @@ function soundComplete() {
 
 function soundSaved() {
   playTone({ freq: 880, gain: 0.12, decay: 0.3, duration: 0.32 });
+}
+
+function triggerFlash() {
+  flashOverlay.classList.add("flash");
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      flashOverlay.classList.remove("flash");
+    });
+  });
+}
+
+function applyVignette(canvas) {
+  const ctx2 = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  const grad = ctx2.createRadialGradient(w/2, h/2, Math.min(w,h)*0.25, w/2, h/2, Math.max(w,h)*0.75);
+  grad.addColorStop(0, "rgba(0,0,0,0)");
+  grad.addColorStop(1, "rgba(0,0,0,0.45)");
+  ctx2.fillStyle = grad;
+  ctx2.fillRect(0, 0, w, h);
 }
 
 // ── Video recorder ────────────────────────────────────────────────────────────
@@ -249,27 +270,21 @@ const STRIP_FILE_BG = "#ffffff";
 
 function buildStripCanvas() {
   if (galleryEntries.length === 0) return null;
-  const entries = galleryEntries;
-  const targetW = entries[0].canvas.width;
-  const scaledHeights = entries.map((entry) =>
-    Math.round(entry.canvas.height * (targetW / entry.canvas.width))
-  );
-  const totalH =
-    STRIP_FILE_BORDER * 2 +
-    scaledHeights.reduce((sum, h) => sum + h, 0) +
-    STRIP_FILE_GAP * (entries.length - 1);
-  const totalW = targetW + STRIP_FILE_BORDER * 2;
+  const polaroids = galleryEntries.map((entry, i) => makePolaroid(entry.canvas, i + 1));
+  const totalW = polaroids[0].width + STRIP_FILE_BORDER * 2;
+  const totalH = STRIP_FILE_BORDER * 2 +
+    polaroids.reduce((sum, p) => sum + p.height, 0) +
+    STRIP_FILE_GAP * (polaroids.length - 1);
   const sc = document.createElement("canvas");
   sc.width = totalW;
   sc.height = totalH;
   const sCtx = sc.getContext("2d");
-  sCtx.fillStyle = STRIP_FILE_BG;
+  sCtx.fillStyle = "#f0ede6";
   sCtx.fillRect(0, 0, totalW, totalH);
   let cursorY = STRIP_FILE_BORDER;
-  entries.forEach((entry, i) => {
-    const h = scaledHeights[i];
-    sCtx.drawImage(entry.canvas, STRIP_FILE_BORDER, cursorY, targetW, h);
-    cursorY += h + STRIP_FILE_GAP;
+  polaroids.forEach((p) => {
+    sCtx.drawImage(p, STRIP_FILE_BORDER, cursorY);
+    cursorY += p.height + STRIP_FILE_GAP;
   });
   return sc;
 }
@@ -313,20 +328,34 @@ function resetEverything() {
   statusText.textContent = "everything reset";
 }
 
+function makePolaroid(snapshotCanvas, index) {
+  const BORDER = 10;
+  const BOTTOM = 32;
+  const THUMB_W = 200;
+  const scale = THUMB_W / snapshotCanvas.width;
+  const imgH = Math.round(snapshotCanvas.height * scale);
+  const pc = document.createElement("canvas");
+  pc.width = THUMB_W + BORDER * 2;
+  pc.height = imgH + BORDER + BOTTOM;
+  const pCtx = pc.getContext("2d");
+  pCtx.fillStyle = "#fff";
+  pCtx.fillRect(0, 0, pc.width, pc.height);
+  pCtx.drawImage(snapshotCanvas, BORDER, BORDER, THUMB_W, imgH);
+  pCtx.fillStyle = "#888";
+  pCtx.font = "bold 9px 'IBM Plex Mono', monospace";
+  pCtx.textAlign = "center";
+  const now = new Date();
+  const ts = `${String(now.getDate()).padStart(2,"0")}.${String(now.getMonth()+1).padStart(2,"0")}.${now.getFullYear()} — #${String(index).padStart(2,"0")}`;
+  pCtx.fillText(ts, pc.width / 2, imgH + BORDER + 20);
+  return pc;
+}
+
 function renderGalleryThumb(snapshotCanvas, index) {
   const print = document.createElement("div");
   print.className = "print";
-  const thumbCanvas = document.createElement("canvas");
-  const THUMB_W = 220;
-  const scale = THUMB_W / snapshotCanvas.width;
-  thumbCanvas.width = THUMB_W;
-  thumbCanvas.height = Math.round(snapshotCanvas.height * scale);
-  thumbCanvas.getContext("2d").drawImage(snapshotCanvas, 0, 0, thumbCanvas.width, thumbCanvas.height);
-  const label = document.createElement("div");
-  label.className = "print-label";
-  label.textContent = `#${String(index).padStart(2, "0")}`;
-  print.appendChild(thumbCanvas);
-  print.appendChild(label);
+  const pc = makePolaroid(snapshotCanvas, index);
+  pc.style.width = "100%";
+  print.appendChild(pc);
   galleryStrip.insertBefore(print, galleryStrip.firstChild);
 }
 
@@ -606,6 +635,8 @@ function finishCountdownAndCapture(box) {
   const cropCtx = cropCanvas.getContext("2d");
   cropCtx.drawImage(mirroredFrame, box.x, box.y, box.width, box.height, 0, 0, cropCanvas.width, cropCanvas.height);
 
+  triggerFlash();
+
   // color version — saved to strip at the end
   const colorImageData = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
   applyPhotoboothEffect(colorImageData, false);
@@ -613,11 +644,13 @@ function finishCountdownAndCapture(box) {
   colorCanvas.width = cropCanvas.width;
   colorCanvas.height = cropCanvas.height;
   colorCanvas.getContext("2d").putImageData(colorImageData, 0, 0);
+  applyVignette(colorCanvas);
 
   // B&W version — used for puzzle pieces while solving
   const bwImageData = cropCtx.getImageData(0, 0, cropCanvas.width, cropCanvas.height);
   applyPhotoboothEffect(bwImageData, true);
   cropCtx.putImageData(bwImageData, 0, 0);
+  applyVignette(cropCanvas);
 
   puzzle.fullPhotoboothCanvas = colorCanvas;
 
