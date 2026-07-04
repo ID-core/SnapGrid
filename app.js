@@ -456,7 +456,7 @@ async function initHandLandmarker() {
         minTrackingConfidence: 0.6,
       }),
       LOAD_TIMEOUT_MS,
-      "Timed out downloading HandLandmarker model (~10MB) with GPU."
+      "Timed out downloading model (~10MB) with GPU."
     );
     return handLandmarker;
   } catch (gpuErr) {
@@ -477,7 +477,7 @@ async function initHandLandmarker() {
         minTrackingConfidence: 0.6,
       }),
       LOAD_TIMEOUT_MS,
-      "Timed out downloading HandLandmarker model even with CPU. Check your connection."
+      "Timed out downloading model even with CPU. Check your connection."
     );
     return handLandmarker;
   } catch (cpuErr) {
@@ -616,6 +616,19 @@ function shuffle(arr) {
   return arr;
 }
 
+// Sattolo's algorithm: produces a random single-cycle permutation of
+// [0..n-1], which guarantees NO index maps to itself (a "derangement").
+// Used so that when pieces are shuffled into slots, no piece can ever
+// land back on its own correct slot at the start.
+function shuffleDerangedIndices(n) {
+  const indices = Array.from({ length: n }, (_, i) => i);
+  for (let i = indices.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * i); // note: j in [0, i-1], never i
+    [indices[i], indices[j]] = [indices[j], indices[i]];
+  }
+  return indices;
+}
+
 function finishCountdownAndCapture(box) {
   countdown.active = false;
 
@@ -629,11 +642,25 @@ function finishCountdownAndCapture(box) {
   mirroredCtx.drawImage(videoEl, 0, 0, mirroredFrame.width, mirroredFrame.height);
   mirroredCtx.restore();
 
+  // Compute a tile size that divides evenly into the frame, then crop to
+  // EXACTLY tileW*GRID by tileH*GRID (discarding a few leftover pixels
+  // at most). This guarantees all 9 tiles are precisely the same size
+  // and sit flush on the grid — no oversized/overhanging edge tile.
+  const rawTileW = Math.max(1, Math.floor(box.width / GRID));
+  const rawTileH = Math.max(1, Math.floor(box.height / GRID));
+  const gridW = rawTileW * GRID;
+  const gridH = rawTileH * GRID;
+
+  // The board now occupies exactly this aligned rectangle — used for the
+  // grid overlay, drop-zone math, and everything downstream, so visuals
+  // and hit-testing always agree with the tile boundaries.
+  const alignedBox = { x: box.x, y: box.y, width: gridW, height: gridH };
+
   const cropCanvas = document.createElement("canvas");
-  cropCanvas.width = Math.max(1, Math.round(box.width));
-  cropCanvas.height = Math.max(1, Math.round(box.height));
+  cropCanvas.width = gridW;
+  cropCanvas.height = gridH;
   const cropCtx = cropCanvas.getContext("2d");
-  cropCtx.drawImage(mirroredFrame, box.x, box.y, box.width, box.height, 0, 0, cropCanvas.width, cropCanvas.height);
+  cropCtx.drawImage(mirroredFrame, box.x, box.y, gridW, gridH, 0, 0, gridW, gridH);
 
   triggerFlash();
 
@@ -654,39 +681,51 @@ function finishCountdownAndCapture(box) {
 
   puzzle.fullPhotoboothCanvas = colorCanvas;
 
-  const tileW = Math.floor(cropCanvas.width / GRID);
-  const tileH = Math.floor(cropCanvas.height / GRID);
+  const tileW = rawTileW;
+  const tileH = rawTileH;
   const pieces = [];
 
   for (let row = 0; row < GRID; row++) {
     for (let col = 0; col < GRID; col++) {
       const sx = col * tileW;
       const sy = row * tileH;
-      const w = col === GRID - 1 ? cropCanvas.width - sx : tileW;
-      const h = row === GRID - 1 ? cropCanvas.height - sy : tileH;
       const pieceCanvas = document.createElement("canvas");
-      pieceCanvas.width = w;
-      pieceCanvas.height = h;
-      pieceCanvas.getContext("2d").drawImage(cropCanvas, sx, sy, w, h, 0, 0, w, h);
-      pieces.push({ row, col, canvas: pieceCanvas, w, h, x: 0, y: 0, placed: false, dragging: false });
+      pieceCanvas.width = tileW;
+      pieceCanvas.height = tileH;
+      pieceCanvas.getContext("2d").drawImage(cropCanvas, sx, sy, tileW, tileH, 0, 0, tileW, tileH);
+      pieces.push({ row, col, canvas: pieceCanvas, w: tileW, h: tileH, x: 0, y: 0, placed: false, dragging: false });
     }
   }
 
   const slots = [];
   for (let row = 0; row < GRID; row++) {
     for (let col = 0; col < GRID; col++) {
-      slots.push({ x: box.x + col * tileW, y: box.y + row * tileH });
+      slots.push({ x: alignedBox.x + col * tileW, y: alignedBox.y + row * tileH });
     }
   }
-  shuffle(slots);
+
+  // Guaranteed derangement: piece i is never assigned slots[i] (its own
+  // correct slot), so every tile always starts in the wrong place. A
+  // hard verification pass double-checks this before proceeding — if
+  // anything were ever to slip through, we just re-roll the shuffle.
+  let order;
+  let guard = 0;
+  do {
+    order = shuffleDerangedIndices(slots.length);
+    guard++;
+  } while (
+    guard < 50 &&
+    order.some((slotIndex, i) => slotIndex === i)
+  );
 
   pieces.forEach((piece, i) => {
-    piece.x = slots[i].x;
-    piece.y = slots[i].y;
-    if (isNearOwnCell(piece, box, tileW, tileH)) snapPieceToCell(piece, box, tileW, tileH);
+    const slot = slots[order[i]];
+    piece.x = slot.x;
+    piece.y = slot.y;
+    piece.placed = false;
   });
 
-  puzzle.boardBox = box;
+  puzzle.boardBox = alignedBox;
   puzzle.pieces = pieces;
   puzzle.tileW = tileW;
   puzzle.tileH = tileH;
@@ -698,7 +737,7 @@ function finishCountdownAndCapture(box) {
   startRecording();
 }
 
-const drag = { activeHand: null, piece: null, offsetX: 0, offsetY: 0 };
+const drag = { activeHand: null, piece: null, offsetX: 0, offsetY: 0, originX: 0, originY: 0 };
 
 function isNearOwnCell(piece, box, tileW, tileH) {
   const correctX = box.x + piece.col * tileW;
@@ -718,14 +757,11 @@ function reconcilePlacedState(box, tileW, tileH) {
   return puzzle.pieces.every((p) => p.placed);
 }
 
-function snapPieceToCell(piece, box, tileW, tileH) {
-  displaceCellOccupant(piece, piece.row, piece.col, box, tileW, tileH);
-  piece.x = box.x + piece.col * tileW;
-  piece.y = box.y + piece.row * tileH;
-  piece.placed = true;
-}
-
-function displaceCellOccupant(piece, targetRow, targetCol, box, tileW, tileH) {
+// If a piece already occupies the (targetRow, targetCol) cell, swap it
+// out to exactly (originX, originY) — the grid-aligned cell the dragged
+// piece just vacated. No randomness, no jitter: it always lands cleanly
+// on a real grid cell.
+function displaceCellOccupant(piece, targetRow, targetCol, box, tileW, tileH, originX, originY) {
   const cellX = box.x + targetCol * tileW;
   const cellY = box.y + targetRow * tileH;
   const occupant = puzzle.pieces.find((p) => {
@@ -735,29 +771,7 @@ function displaceCellOccupant(piece, targetRow, targetCol, box, tileW, tileH) {
     return cx >= cellX && cx < cellX + tileW && cy >= cellY && cy < cellY + tileH;
   });
   if (!occupant) return;
-  if (occupant.row === targetRow && occupant.col === targetCol && occupant.placed) return;
-  occupant.placed = false;
-  const freeCells = [];
-  for (let row = 0; row < GRID; row++) {
-    for (let col = 0; col < GRID; col++) {
-      if (row === targetRow && col === targetCol) continue;
-      const cx0 = box.x + col * tileW;
-      const cy0 = box.y + row * tileH;
-      const taken = puzzle.pieces.some((p) => {
-        if (p === occupant || p === piece || p.displacing) return false;
-        const cx = p.x + p.w / 2;
-        const cy = p.y + p.h / 2;
-        return cx >= cx0 && cx < cx0 + tileW && cy >= cy0 && cy < cy0 + tileH;
-      });
-      if (!taken) freeCells.push({ row, col });
-    }
-  }
-  let targetSlot = freeCells.length > 0
-    ? freeCells[Math.floor(Math.random() * freeCells.length)]
-    : { row: occupant.row, col: occupant.col };
-  const jitterX = (Math.random() - 0.5) * tileW * 0.5;
-  const jitterY = (Math.random() - 0.5) * tileH * 0.5;
-  animateDisplacement(occupant, box.x + targetSlot.col * tileW + jitterX, box.y + targetSlot.row * tileH + jitterY, box);
+  animateDisplacement(occupant, originX, originY, box);
 }
 
 const DISPLACE_ANIM_MS = 220;
@@ -800,6 +814,12 @@ function findNearestPiece(px, py) {
   return best;
 }
 
+function cellOf(centerX, centerY, box, tileW, tileH) {
+  const col = Math.min(GRID - 1, Math.max(0, Math.floor((centerX - box.x) / tileW)));
+  const row = Math.min(GRID - 1, Math.max(0, Math.floor((centerY - box.y) / tileH)));
+  return { row, col };
+}
+
 function handleDragForHand(handLabel, pinching, indexPx) {
   if (pinching) {
     if (drag.activeHand === null) {
@@ -814,6 +834,12 @@ function handleDragForHand(handLabel, pinching, indexPx) {
         drag.piece = candidate;
         drag.offsetX = indexPx.x - candidate.x;
         drag.offsetY = indexPx.y - candidate.y;
+        // Remember the exact grid cell this piece is being lifted from,
+        // so whatever piece it lands on can swap back into this cell.
+        const box = puzzle.boardBox;
+        const origin = cellOf(candidate.x + candidate.w / 2, candidate.y + candidate.h / 2, box, puzzle.tileW, puzzle.tileH);
+        drag.originX = box.x + origin.col * puzzle.tileW;
+        drag.originY = box.y + origin.row * puzzle.tileH;
         candidate.dragging = true;
         candidate.placed = false;
       }
@@ -825,21 +851,21 @@ function handleDragForHand(handLabel, pinching, indexPx) {
     if (drag.activeHand === handLabel && drag.piece) {
       const piece = drag.piece;
       piece.dragging = false;
-      if (isNearOwnCell(piece, puzzle.boardBox, puzzle.tileW, puzzle.tileH)) {
-        snapPieceToCell(piece, puzzle.boardBox, puzzle.tileW, puzzle.tileH);
-      } else {
-        clampPieceToBoard(piece);
-        const box = puzzle.boardBox;
-        const cx = piece.x + piece.w / 2;
-        const cy = piece.y + piece.h / 2;
-        const dropCol = Math.min(GRID - 1, Math.max(0, Math.floor((cx - box.x) / puzzle.tileW)));
-        const dropRow = Math.min(GRID - 1, Math.max(0, Math.floor((cy - box.y) / puzzle.tileH)));
-        displaceCellOccupant(piece, dropRow, dropCol, box, puzzle.tileW, puzzle.tileH);
-      }
+      const box = puzzle.boardBox;
+      clampPieceToBoard(piece);
+      const drop = cellOf(piece.x + piece.w / 2, piece.y + piece.h / 2, box, puzzle.tileW, puzzle.tileH);
+      // Swap: move whatever tile currently sits in the drop cell back to
+      // the cell we just picked this tile up from.
+      displaceCellOccupant(piece, drop.row, drop.col, box, puzzle.tileW, puzzle.tileH, drag.originX, drag.originY);
+      // The dropped tile always lands exactly aligned on a grid cell —
+      // never floating at an arbitrary pixel position.
+      piece.x = box.x + drop.col * puzzle.tileW;
+      piece.y = box.y + drop.row * puzzle.tileH;
+      piece.placed = (drop.row === piece.row && drop.col === piece.col);
       drag.activeHand = null;
       const wasSolved = puzzle.solved;
       drag.piece = null;
-      puzzle.solved = reconcilePlacedState(puzzle.boardBox, puzzle.tileW, puzzle.tileH);
+      puzzle.solved = reconcilePlacedState(box, puzzle.tileW, puzzle.tileH);
       if (piece.placed) soundSnap();
       if (!wasSolved && puzzle.solved) soundComplete();
       updateProgressBadge();
@@ -1219,7 +1245,7 @@ function showLoaderError(message) {
 function resetLoaderUI() {
   loadingOverlay.classList.remove("hidden");
   loaderText.style.color = "";
-  loaderText.textContent = "loading HandLandmarker model…";
+  loaderText.textContent = "loading ... \n Stay Tight !";
   loaderRetry.classList.add("hidden");
   errorBanner.style.display = "none";
 }
