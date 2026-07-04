@@ -1,98 +1,71 @@
-# PuzzleCam — Gesture Capture
-**© 2026 aiwithunnati — all rights reserved**
+# PuzzleCam
 
-A hand-gesture controlled photobooth puzzle game that runs entirely in your browser. No installation, no backend, no frameworks. Just your hands and a webcam.
+Gesture-driven photobooth puzzle game that runs entirely in the browser. It uses a webcam, hand tracking, and a 3x3 photo puzzle to turn a simple capture into a short interactive challenge. No backend, no framework, and no install step.
 
----
+## Core idea
 
-## what is this?
+The flow is intentionally simple: frame the shot with your hands, pinch to capture, solve the puzzle with finger gestures, and finish the round by saving the result as a polaroid-style strip. Everything stays inside one browser tab.
 
-You use your hands as a camera frame, pinch to take a photo, solve a puzzle with your fingers, and watch it shatter into a polaroid strip. The whole thing runs in one browser tab with zero setup.
+## Quick start
 
-Built with vanilla JavaScript, MediaPipe hand tracking, and the Web Audio API. No React. No npm. Nothing to install.
-
----
-
-## how to run it
-
-**1. clone the repo**
+1. Clone the repository.
 ```bash
 git clone https://github.com/Unnati-23/puzzlecam.git
 cd puzzlecam
 ```
 
-**2. open in VS Code and click Go Live**
+2. Open the folder in VS Code and start a local server.
+Install the Live Server extension if needed, then click Go Live from the editor status bar.
 
-Install the [Live Server](https://marketplace.visualstudio.com/items?itemName=ritwickdey.LiveServer) extension by Ritwick Dey if you don't have it. Then click **Go Live** in the bottom right corner.
-
-**3. open in Chrome or Edge**
-```
+3. Open the local address in Chrome or Edge.
+```text
 http://localhost:5500
 ```
-Allow camera access when the browser asks.
+Camera permission is required. The first load also downloads the MediaPipe hand model, which is about 10 MB, so internet is needed once before it can run offline.
 
-> needs internet on first load to download the MediaPipe hand model (~10MB). after that it works offline.
+## How it works
 
----
+PuzzleCam is built around hand gestures instead of mouse input. Raise both hands to let the app track your fingers, use a two-hand pinch to define the capture frame and start the 3 second countdown, and use a one-hand pinch to pick up and move puzzle pieces. When a piece is near the right spot, it snaps into place automatically. Hold a closed fist to save the solved puzzle or reset the board.
 
-## how to play
+The full session looks like this:
 
-| gesture | what it does |
+1. Raise both hands so the space between your index fingers becomes the camera frame.
+2. Pinch with both hands to trigger the 3 second countdown, flash, and black-and-white capture.
+3. Rebuild the 3x3 puzzle by dragging pieces with finger pinches.
+4. Make a fist when finished so the puzzle shatters and saves as a color polaroid with its date and photo number.
+5. Finish 3 puzzles to reveal the full photo strip and download it.
+
+## What the app includes
+
+- Black-and-white puzzles while solving, followed by a color reveal when a puzzle is saved.
+- A camera flash effect right at capture time.
+- Polaroid borders with the date and photo number stamped on each print.
+- Countdown beeps, piece snap sounds, a shatter burst, and a completion chime generated with the Web Audio API.
+- Automatic video recording for each solved puzzle, downloadable as WebM.
+- A popup photo strip that appears after all 3 puzzles are completed.
+- Pure browser execution with no React, no npm, and no build step.
+
+## Technology notes
+
+- MediaPipe Tasks Vision `v0.10.14` for hand landmark detection.
+- Canvas 2D for rendering, visual effects, puzzle layout, and shatter behavior.
+- Web Audio API for all sound effects.
+- MediaRecorder API for video capture.
+- Vanilla JavaScript modules for the application logic.
+
+## Browser support
+
+| Browser | Status |
 |---|---|
-| raise both hands | camera starts tracking your hands |
-| pinch both hands together | defines the photo frame and starts 3 second countdown |
-| one hand pinch on a piece | drag that puzzle piece |
-| drop piece near correct spot | it snaps in automatically |
-| closed fist (hold) | saves completed puzzle / resets board |
+| Chrome / Edge | Best experience |
+| Firefox | Works |
+| Safari | Limited |
+| Mobile | Not recommended |
 
-**the full flow:**
-1. hold both hands up — the space between your index fingers becomes your camera frame
-2. pinch both hands → 3 second countdown → flash → photo captured in B&W
-3. solve the 3x3 puzzle by dragging pieces with a pinch gesture
-4. make a fist when done → pieces shatter → saved as a color polaroid with your date and photo number
-5. complete 3 puzzles → your full photo strip pops up → download it
+## Notes on the guide page
 
----
+The separate guide page was a full-screen HTML walkthrough that covered the same project in a more visual format. It included a top navigation bar, a hero section, setup instructions, a gesture table, a feature grid, a closing call-to-action, and footer links. If you are removing guide.html, this README now holds the essential setup, controls, and feature details needed to use the project.
 
-## what makes it different
+## License
 
-- puzzles are **B&W while solving**, then reveal as **full color** when saved
-- **camera flash** at the moment of capture
-- **polaroid borders** with date and number stamped on each photo
-- **sound design** — countdown beeps, piece snap, shatter burst, completion chime
-- **video recording** of each solve, downloadable as WebM
-- **photo strip popup** inside the game when all 3 are done
-- zero frameworks, zero dependencies, everything runs in the browser
-
----
-
-## tech used
-
-- MediaPipe Tasks Vision `v0.10.14` — hand landmark detection
-- Canvas 2D API — rendering, effects, puzzle, shatter physics
-- Web Audio API — all sounds generated in code, no audio files
-- MediaRecorder API — video capture
-- Vanilla JavaScript (ES Modules) — no frameworks, no build step
-
----
-
-## browser support
-
-| browser | support |
-|---|---|
-| Chrome / Edge | recommended |
-| Firefox | works |
-| Safari | limited |
-| mobile | not recommended |
-
----
-
-## tag me!
-
-if you try this i would genuinely love to see your photobooth strip. tag me **@aiwithunnati** — have fun with it!
-
----
-
-## license
-
-MIT — free to use, modify, and share.
+MIT. Free to use, modify, and share.

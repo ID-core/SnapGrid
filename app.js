@@ -190,7 +190,7 @@ function startRecording() {
     recorder.instance.start();
     recIndicator.classList.remove("hidden");
   } catch (err) {
-    console.warn("[PuzzleCam] MediaRecorder failed:", err);
+    console.warn("[SnapGrid] MediaRecorder failed:", err);
   }
 }
 
@@ -205,7 +205,7 @@ function downloadVideo() {
   const url = URL.createObjectURL(recorder.blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `puzzlecam_solve_${Date.now()}.webm`;
+  link.download = `snapgrid_solve_${Date.now()}.webm`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -297,7 +297,7 @@ function downloadPhotoStrip() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `puzzlecam_strip_${Date.now()}.png`;
+    link.download = `snapgrid_strip_${Date.now()}.png`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -460,7 +460,7 @@ async function initHandLandmarker() {
     );
     return handLandmarker;
   } catch (gpuErr) {
-    console.warn("[PuzzleCam] GPU delegate failed, retrying with CPU…", gpuErr);
+    console.warn("[SnapGrid] GPU delegate failed, retrying with CPU…", gpuErr);
   }
   try {
     const handLandmarker = await withTimeout(
@@ -803,6 +803,11 @@ function findNearestPiece(px, py) {
 function handleDragForHand(handLabel, pinching, indexPx) {
   if (pinching) {
     if (drag.activeHand === null) {
+      // Once the puzzle is solved, lock the pieces in place — pinching
+      // should no longer be able to pick a new tile back up. The only
+      // way out of the solved state is the fist gesture (save) or a
+      // full reset.
+      if (puzzle.solved) return;
       const candidate = findNearestPiece(indexPx.x, indexPx.y);
       if (candidate) {
         drag.activeHand = handLabel;
