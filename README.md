@@ -10,7 +10,7 @@ The flow is intentionally simple: frame the shot with your hands, pinch to captu
 
 1. Clone the repository.
 ```bash
-git clone https://github.com/Unnati-23/puzzlecam.git
+git clone https://github.com/ID-core/SnapGrid.git
 cd puzzlecam
 ```
 
@@ -62,10 +62,3 @@ The full session looks like this:
 | Safari | Limited |
 | Mobile | Not recommended |
 
-## Notes on the guide page
-
-The separate guide page was a full-screen HTML walkthrough that covered the same project in a more visual format. It included a top navigation bar, a hero section, setup instructions, a gesture table, a feature grid, a closing call-to-action, and footer links. If you are removing guide.html, this README now holds the essential setup, controls, and feature details needed to use the project.
-
-## License
-
-MIT. Free to use, modify, and share.
