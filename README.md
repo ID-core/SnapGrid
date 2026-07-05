@@ -1,4 +1,4 @@
-# PuzzleCam
+# SnapGrid
 
 Gesture-driven photobooth puzzle game that runs entirely in the browser. It uses a webcam, hand tracking, and a 3x3 photo puzzle to turn a simple capture into a short interactive challenge. No backend, no framework, and no install step.
 
@@ -11,7 +11,7 @@ The flow is intentionally simple: frame the shot with your hands, pinch to captu
 1. Clone the repository.
 ```bash
 git clone https://github.com/ID-core/SnapGrid.git
-cd puzzlecam
+cd SnapGrid
 ```
 
 2. Open the folder in VS Code and start a local server.
@@ -25,7 +25,7 @@ Camera permission is required. The first load also downloads the MediaPipe hand 
 
 ## How it works
 
-PuzzleCam is built around hand gestures instead of mouse input. Raise both hands to let the app track your fingers, use a two-hand pinch to define the capture frame and start the 3 second countdown, and use a one-hand pinch to pick up and move puzzle pieces. When a piece is near the right spot, it snaps into place automatically. Hold a closed fist to save the solved puzzle or reset the board.
+SnapGrid is built around hand gestures instead of mouse input. Raise both hands to let the app track your fingers, use a two-hand pinch to define the capture frame and start the 3 second countdown, and use a one-hand pinch to pick up and move puzzle pieces. When a piece is near the right spot, it snaps into place automatically. Hold a closed fist to save the solved puzzle or reset the board.
 
 The full session looks like this:
 
