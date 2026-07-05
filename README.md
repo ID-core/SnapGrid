@@ -1,4 +1,4 @@
-# PuzzleCam
+# SnapGrid
 
 Gesture-driven photobooth puzzle game that runs entirely in the browser. It uses a webcam, hand tracking, and a 3x3 photo puzzle to turn a simple capture into a short interactive challenge. No backend, no framework, and no install step.
 
